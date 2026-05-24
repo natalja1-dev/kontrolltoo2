@@ -5,6 +5,8 @@ import ee.kontrolltoo.backend.repository.ProductRepository;
 import ee.kontrolltoo.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -17,8 +19,20 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping("products")
-    public List<Product> getProducts() {
-        return productRepository.findAll();
+    public Page<Product> getProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            Pageable pageable
+    ) {
+        if (search == null) {
+            search = "";
+        }
+
+        if (category == null || category.equals("all")) {
+            category = "";
+        }
+
+        return productRepository.findByTitleContainingIgnoreCaseAndCategoryContainingIgnoreCase(search, category, pageable);
     }
 
     @PostMapping("products")
@@ -26,6 +40,10 @@ public class ProductController {
         if (product.getId() != null) {
             throw new RuntimeException("Cannot add product with id");
         }
+        if (product.getPrice() < 0) {
+            throw new RuntimeException("Product price cannot be negative");
+        }
+
         productService.validate(product);
         return productRepository.save(product);
     }
